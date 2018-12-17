@@ -35,10 +35,6 @@
     "engines": {
         "node": ">=4.0.0"
     },
-    "dependencies": {
-        "debug": "^3.1.0",
-        "p-defer": "^1.0.0"
-    },
     "devDependencies": {
         "@types/chai-as-promised": "^7.1.0",
         "@types/debug": "^0.0.30",

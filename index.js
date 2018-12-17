@@ -165,6 +165,7 @@ var Batcher = /** @class */ (function () {
         this._activePromiseCount++;
         batchPromise
             .then(function (outputs) {
+            var _a, _b;
             if (!Array.isArray(outputs)) {
                 throw new Error("Invalid type returned from batching function.");
             }
@@ -193,7 +194,6 @@ var Batcher = /** @class */ (function () {
                 (_a = _this._inputQueue).unshift.apply(_a, retryInputs);
                 (_b = _this._outputQueue).unshift.apply(_b, retryPromises);
             }
-            var _a, _b;
         })
             .catch(function (err) {
             outputPromises.forEach(function (promise) {
