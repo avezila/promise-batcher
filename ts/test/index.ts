@@ -1,13 +1,20 @@
 import * as chai from "chai";
 import { expect } from "chai";
 import * as chaiAsPromised from "chai-as-promised";
-import * as Debug from "debug";
-import { Batcher, BATCHER_RETRY_TOKEN, BatcherOptions, BatcherToken, BatchingResult } from "../index";
-const debug = Debug("promise-batcher:test");
+import {
+    Batcher,
+    BATCHER_RETRY_TOKEN,
+    BatcherOptions,
+    BatcherToken,
+    BatchingResult,
+} from "../index";
 chai.use(chaiAsPromised);
 
 // Verify that the types needed can be imported
-const typingImportTest: BatcherOptions<any, any> | BatchingResult<any> | BatcherToken = undefined as any;
+const typingImportTest:
+    | BatcherOptions<any, any>
+    | BatchingResult<any>
+    | BatcherToken = undefined as any;
 if (typingImportTest) {
     // do nothing
 }
@@ -38,17 +45,22 @@ function wait(time: number): Promise<void> {
 /**
  * Expects an array of result times (ms) to be within the tolerance range of the specified numbers of target ticks.
  */
-function expectTimes(resultTimes: number[], targetTicks: number[], message: string) {
+function expectTimes(
+    resultTimes: number[],
+    targetTicks: number[],
+    message: string,
+) {
     expect(resultTimes).to.have.lengthOf(targetTicks.length, message);
     resultTimes.forEach((val, i) => {
         expect(val).to.be.within(
-            targetTicks[i] * tick, targetTicks[i] * tick + tolerance, message + " (" + i + ")",
+            targetTicks[i] * tick,
+            targetTicks[i] * tick + tolerance,
+            message + " (" + i + ")",
         );
     });
 }
 
 function unhandledRejectionListener(err: any) {
-    debug("unhandledRejectionListener: " + err.stack);
     // Fail the test
     throw new Error("UnhandledPromiseRejection: " + err.message);
 }
@@ -69,12 +81,14 @@ describe("Batcher", () => {
         });
         const inputs = [1, 5, 9];
         const start: number = Date.now();
-        return Promise.all(inputs.map((input) => {
-            return batcher.getResult(input).then((output) => {
-                expect(output).to.equal(String(input), "Outputs");
-                expectTimes([Date.now() - start], [1], "Timing Results");
-            });
-        })).then(() => {
+        return Promise.all(
+            inputs.map((input) => {
+                return batcher.getResult(input).then((output) => {
+                    expect(output).to.equal(String(input), "Outputs");
+                    expectTimes([Date.now() - start], [1], "Timing Results");
+                });
+            }),
+        ).then(() => {
             expect(runCount).to.equal(1, "runCount");
         });
     });
@@ -90,14 +104,24 @@ describe("Batcher", () => {
             },
         });
         const inputs = [[1, 9], [5, 7]];
-        return Promise.all(inputs.map((input, index) => {
-            return wait(index * tick).then(() => Promise.all(input.map((value, index2) => {
-                return batcher.getResult(value).then((result) => {
-                    expect(result).to.equal(String(value));
-                    expectTimes([Date.now() - start], [index + 2], `Timing result (${index},${index2})`);
-                });
-            })));
-        })).then(() => {
+        return Promise.all(
+            inputs.map((input, index) => {
+                return wait(index * tick).then(() =>
+                    Promise.all(
+                        input.map((value, index2) => {
+                            return batcher.getResult(value).then((result) => {
+                                expect(result).to.equal(String(value));
+                                expectTimes(
+                                    [Date.now() - start],
+                                    [index + 2],
+                                    `Timing result (${index},${index2})`,
+                                );
+                            });
+                        }),
+                    ),
+                );
+            }),
+        ).then(() => {
             expect(runCount).to.equal(2, "runCount");
         });
     });
@@ -113,9 +137,11 @@ describe("Batcher", () => {
         });
         const inputs = [1, 5, 9];
         const start: number = Date.now();
-        return Promise.all(inputs.map(() => {
-            return batcher.getResult(undefined).then(() => Date.now() - start);
-        })).then((times) => {
+        return Promise.all(
+            inputs.map(() => {
+                return batcher.getResult(undefined).then(() => Date.now() - start);
+            }),
+        ).then((times) => {
             expectTimes(times, [1, 1, 2], "Timing Results");
             expect(runCount).to.equal(2, "runCount");
         });
@@ -132,12 +158,14 @@ describe("Batcher", () => {
             });
             const inputs = [1, 5, 9];
             const start: number = Date.now();
-            return Promise.all(inputs.map((input) => {
-                return batcher.getResult(input).then((output) => {
-                    expect(output).to.equal(String(input), "Outputs");
-                    expectTimes([Date.now() - start], [1], "Timing Results");
-                });
-            })).then(() => {
+            return Promise.all(
+                inputs.map((input) => {
+                    return batcher.getResult(input).then((output) => {
+                        expect(output).to.equal(String(input), "Outputs");
+                        expectTimes([Date.now() - start], [1], "Timing Results");
+                    });
+                }),
+            ).then(() => {
                 expect(runCount).to.equal(2, "runCount");
             });
         });
@@ -152,12 +180,14 @@ describe("Batcher", () => {
             });
 
             const runCounts = [0, 1, 1];
-            return Promise.all(runCounts.map((expectedRunCount) => {
-                // The batching function should be triggered instantly when the max batch size is reached
-                const promise = batcher.getResult(undefined);
-                expect(runCount).to.equal(expectedRunCount);
-                return promise;
-            }));
+            return Promise.all(
+                runCounts.map((expectedRunCount) => {
+                    // The batching function should be triggered instantly when the max batch size is reached
+                    const promise = batcher.getResult(undefined);
+                    expect(runCount).to.equal(expectedRunCount);
+                    return promise;
+                }),
+            );
         });
     });
     it("queuingDelay", () => {
@@ -171,11 +201,13 @@ describe("Batcher", () => {
         });
         const delays = [0, 1, 3];
         const start: number = Date.now();
-        return Promise.all(delays.map((delay) => {
-            return wait(delay * tick)
-                .then(() => batcher.getResult(undefined))
-                .then(() => Date.now() - start);
-        })).then((results) => {
+        return Promise.all(
+            delays.map((delay) => {
+                return wait(delay * tick)
+                    .then(() => batcher.getResult(undefined))
+                    .then(() => Date.now() - start);
+            }),
+        ).then((results) => {
             expectTimes(results, [2, 2, 5], "Timing Results");
             expect(runCount).to.equal(2, "runCount");
         });
@@ -192,11 +224,13 @@ describe("Batcher", () => {
             });
             const delays = [0, 1, 2, 3, 4];
             const start: number = Date.now();
-            return Promise.all(delays.map((delay) => {
-                return wait(delay * tick)
-                    .then(() => batcher.getResult(undefined))
-                    .then(() => Date.now() - start);
-            })).then((results) => {
+            return Promise.all(
+                delays.map((delay) => {
+                    return wait(delay * tick)
+                        .then(() => batcher.getResult(undefined))
+                        .then(() => Date.now() - start);
+                }),
+            ).then((results) => {
                 expectTimes(results, [5, 7, 7, 9, 9], "Timing Results");
                 expect(runCount).to.equal(3, "runCount");
             });
@@ -210,11 +244,13 @@ describe("Batcher", () => {
             });
             const delays = [0, 1];
             const start: number = Date.now();
-            return Promise.all(delays.map((delay) => {
-                return wait(delay * tick)
-                    .then(() => batcher.getResult(undefined))
-                    .then(() => Date.now() - start);
-            })).then((results) => {
+            return Promise.all(
+                delays.map((delay) => {
+                    return wait(delay * tick)
+                        .then(() => batcher.getResult(undefined))
+                        .then(() => Date.now() - start);
+                }),
+            ).then((results) => {
                 expectTimes(results, [2, 4], "Timing Results");
             });
         });
@@ -229,12 +265,14 @@ describe("Batcher", () => {
                 queuingThresholds: [1, Infinity],
             });
             const start: number = Date.now();
-            return Promise.all([
-                batcher.getResult(undefined).then(() => {
-                    return batcher.getResult(undefined);
-                }),
-                wait(2 * tick).then(() => batcher.getResult(undefined)),
-            ].map((promise) => promise.then(() => Date.now() - start))).then((results) => {
+            return Promise.all(
+                [
+                    batcher.getResult(undefined).then(() => {
+                        return batcher.getResult(undefined);
+                    }),
+                    wait(2 * tick).then(() => batcher.getResult(undefined)),
+                ].map((promise) => promise.then(() => Date.now() - start)),
+            ).then((results) => {
                 expectTimes(results, [8, 8], "Timing Results");
                 expect(runCount).to.equal(2, "runCount");
             });
@@ -248,10 +286,11 @@ describe("Batcher", () => {
                 queuingThresholds: [1, Infinity],
             });
             const start: number = Date.now();
-            return Promise.all([
-                batcher.getResult(undefined),
-                batcher.getResult(undefined),
-            ].map((promise) => promise.then(() => Date.now() - start))).then((results) => {
+            return Promise.all(
+                [batcher.getResult(undefined), batcher.getResult(undefined)].map(
+                    (promise) => promise.then(() => Date.now() - start),
+                ),
+            ).then((results) => {
                 expectTimes(results, [1, 2], "Timing Results");
             });
         });
@@ -291,7 +330,9 @@ describe("Batcher", () => {
                     await wait(tick);
                     batchNumber++;
                     return inputs.map((input, index) => {
-                        return batchNumber < 2 && index < 1 ? BATCHER_RETRY_TOKEN : input + 1;
+                        return batchNumber < 2 && index < 1
+                            ? BATCHER_RETRY_TOKEN
+                            : input + 1;
                     });
                 },
             });
@@ -313,7 +354,9 @@ describe("Batcher", () => {
                     batchInputs.push(inputs);
                     await wait(tick);
                     return inputs.map((input, index) => {
-                        return batchInputs.length < 2 && index < 2 ? BATCHER_RETRY_TOKEN : input + 1;
+                        return batchInputs.length < 2 && index < 2
+                            ? BATCHER_RETRY_TOKEN
+                            : input + 1;
                     });
                 },
                 maxBatchSize: 3,
@@ -419,7 +462,9 @@ describe("Batcher", () => {
                 batchingFunction: async (inputs) => {
                     runCount++;
                     await wait(tick);
-                    return runCount === 1 ? inputs.map(() => BATCHER_RETRY_TOKEN) : inputs;
+                    return runCount === 1
+                        ? inputs.map(() => BATCHER_RETRY_TOKEN)
+                        : inputs;
                 },
                 queuingDelay: tick,
                 queuingThresholds: [1, Infinity],
@@ -443,19 +488,26 @@ describe("Batcher", () => {
         it("Single Rejection", () => {
             const batcher = new Batcher<string, undefined>({
                 batchingFunction: (input) => {
-                    return wait(tick).then(() => input.map((value) => {
-                        return value === "error" ? new Error("test") : undefined;
-                    }));
+                    return wait(tick).then(() =>
+                        input.map((value) => {
+                            return value === "error" ? new Error("test") : undefined;
+                        }),
+                    );
                 },
             });
 
             const inputs = ["a", "error", "b"];
-            return Promise.all(inputs.map((input) => {
-                return batcher.getResult(input).then(() => true).catch((err: Error) => {
-                    expect(err.message).to.equal("test");
-                    return false;
-                });
-            })).then((results) => {
+            return Promise.all(
+                inputs.map((input) => {
+                    return batcher
+                        .getResult(input)
+                        .then(() => true)
+                        .catch((err: Error) => {
+                            expect(err.message).to.equal("test");
+                            return false;
+                        });
+                }),
+            ).then((results) => {
                 expect(results).to.deep.equal([true, false, true]);
             });
         });
@@ -473,12 +525,17 @@ describe("Batcher", () => {
             });
 
             const inputs = [0, 1, 2];
-            return Promise.all(inputs.map((input) => {
-                return batcher.getResult(input).then(() => true).catch((err: Error) => {
-                    expect(err.message).to.equal("test");
-                    return false;
-                });
-            })).then((results) => {
+            return Promise.all(
+                inputs.map((input) => {
+                    return batcher
+                        .getResult(input)
+                        .then(() => true)
+                        .catch((err: Error) => {
+                            expect(err.message).to.equal("test");
+                            return false;
+                        });
+                }),
+            ).then((results) => {
                 expect(results).to.deep.equal([false, false, true]);
             });
         });
@@ -497,13 +554,15 @@ describe("Batcher", () => {
                 maxBatchSize: 2,
             });
 
-            return Promise.all([0, 1].map((input) => {
-                const promise = batcher.getResult(input);
-                if (input !== 2) {
-                    return expect(promise).to.be.rejectedWith(Error, "test");
-                }
-                return promise;
-            }));
+            return Promise.all(
+                [0, 1].map((input) => {
+                    const promise = batcher.getResult(input);
+                    if (input !== 2) {
+                        return expect(promise).to.be.rejectedWith(Error, "test");
+                    }
+                    return promise;
+                }),
+            );
         });
         it("Synchronous Delay Exception Followed By Success", async () => {
             let runCount = 0;
@@ -520,9 +579,14 @@ describe("Batcher", () => {
                 maxBatchSize: 2,
             });
 
-            return Promise.all([0, 1].map(() => {
-                return expect(batcher.getResult(undefined)).to.be.rejectedWith(Error, "test");
-            })).then(() => batcher.getResult(undefined));
+            return Promise.all(
+                [0, 1].map(() => {
+                    return expect(batcher.getResult(undefined)).to.be.rejectedWith(
+                        Error,
+                        "test",
+                    );
+                }),
+            ).then(() => batcher.getResult(undefined));
         });
         it("Asynchronous Delay Exception Followed By Success", () => {
             let runCount = 0;
@@ -541,9 +605,14 @@ describe("Batcher", () => {
                 maxBatchSize: 2,
             });
 
-            return Promise.all([0, 1].map(() => {
-                return expect(batcher.getResult(undefined)).to.be.rejectedWith(Error, "test");
-            })).then(() => batcher.getResult(undefined));
+            return Promise.all(
+                [0, 1].map(() => {
+                    return expect(batcher.getResult(undefined)).to.be.rejectedWith(
+                        Error,
+                        "test",
+                    );
+                }),
+            ).then(() => batcher.getResult(undefined));
         });
         it("Invalid Output Length", () => {
             const batcher = new Batcher<number, undefined>({
@@ -554,9 +623,14 @@ describe("Batcher", () => {
             });
 
             const inputs = [0, 1, 2];
-            return Promise.all(inputs.map((input) => {
-                return batcher.getResult(input).then(() => true).catch(() => false);
-            })).then((results) => {
+            return Promise.all(
+                inputs.map((input) => {
+                    return batcher
+                        .getResult(input)
+                        .then(() => true)
+                        .catch(() => false);
+                }),
+            ).then((results) => {
                 expect(results).to.deep.equal([false, false, false]);
             });
         });
